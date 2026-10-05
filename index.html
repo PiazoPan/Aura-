@@ -1,10 +1,438 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>AURA</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05050a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AURA">
+<title>AURA · Energy Scanner</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#05050a;color:#fff;
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif;
+ min-height:100dvh
+}
+.app{
+ max-width:480px;margin:auto;min-height:100dvh;
+ padding:calc(env(safe-area-inset-top) + 18px) 18px
+ calc(env(safe-area-inset-bottom) + 24px)
+}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.logo{font-size:26px;font-weight:950;letter-spacing:.24em}
+.privacy{
+ font-size:9px;letter-spacing:.1em;color:#8fffd8;
+ border:1px solid #23483e;border-radius:99px;padding:7px 9px
+}
+.stage{
+ position:relative;aspect-ratio:3/4;border-radius:30px;overflow:hidden;
+ background:radial-gradient(circle at 50% 38%,#24213b,#08080e 67%);
+ border:1px solid #29293c;box-shadow:0 28px 80px #000
+}
+video{
+ width:100%;height:100%;object-fit:cover;
+ transform:scaleX(-1);display:none
+}
+.live video{display:block}
+.aura{
+ position:absolute;inset:8% 3%;border-radius:48%;
+ filter:blur(24px);opacity:.45;pointer-events:none;
+ background:radial-gradient(ellipse,transparent 43%,
+ var(--a,#8c52ff) 55%,var(--b,#00d9ff) 67%,transparent 75%);
+ mix-blend-mode:screen;
+ animation:pulse 1.7s ease-in-out infinite alternate
+}
+@keyframes pulse{
+ to{transform:scale(1.08);filter:blur(31px) hue-rotate(22deg)}
+}
+.scanline{
+ position:absolute;left:5%;right:5%;height:2px;
+ background:#cfffff;box-shadow:0 0 22px #0ff;
+ top:8%;opacity:0
+}
+.scanning .scanline{opacity:1;animation:scan 1s linear infinite}
+@keyframes scan{to{top:91%}}
+.intro{
+ position:absolute;inset:0;display:grid;place-content:center;
+ text-align:center;padding:35px
+}
+.live .intro{display:none}
+.intro h1{
+ font-size:45px;line-height:.88;margin:0;letter-spacing:-.055em
+}
+.intro p{color:#aaa;line-height:1.4}
+.status{
+ position:absolute;bottom:19px;left:15px;right:15px;
+ text-align:center;font-size:11px;letter-spacing:.13em;
+ font-weight:850;text-shadow:0 2px 12px #000
+}
+.controls{
+ display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px
+}
+button{
+ border:0;border-radius:18px;padding:16px;
+ font-weight:900;font-size:13px;letter-spacing:.05em;
+ background:#fff;color:#05050a;cursor:pointer
+}
+button:disabled{opacity:.4}
+.alt{background:#171720;color:#fff;border:1px solid #29293a}
+.card{
+ display:none;margin-top:14px;
+ background:linear-gradient(145deg,#12121c,#0b0b11);
+ border:1px solid #29293b;border-radius:25px;padding:18px
+}
+.card.show{display:block}
+.scoretop{display:flex;justify-content:space-between;align-items:flex-end}
+.num{
+ font-size:60px;font-weight:950;line-height:.88;letter-spacing:-.06em
+}
+.tier{font-weight:950;letter-spacing:.12em}
+.cname{color:#aaa;margin-top:7px;font-size:12px}
+.tag{font-size:11px;color:#aaa;margin:7px 0 12px}
+.meters{
+ display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px
+}
+.meter{background:#191923;border-radius:14px;padding:11px}
+.meter b{font-size:21px;display:block}
+.meter span{font-size:9px;color:#999;letter-spacing:.08em}
+.reading{color:#ddd;line-height:1.45}
+.battle{
+ width:100%;margin-top:8px;color:#fff;
+ background:linear-gradient(90deg,#8c52ff,#00c8ff)
+}
+.board{display:none;margin-top:14px}
+.board.show{display:block}
+.winner{
+ text-align:center;font-size:29px;font-weight:950;padding:14px
+}
+.fighter{
+ display:flex;justify-content:space-between;padding:14px;margin:8px 0;
+ border:1px solid #29293a;border-radius:16px;background:#111119
+}
+.tiny{
+ text-align:center;color:#666;font-size:9px;line-height:1.4;
+ margin:14px 15px 0
+}
+</style>
 </head>
+
 <body>
-  AURA
+<main class="app">
+
+<header>
+ <div class="logo">AURA</div>
+ <div class="privacy">● LOCAL · PRIVADO</div>
+</header>
+
+<section class="stage" id="stage">
+ <video id="video" autoplay muted playsinline></video>
+ <div class="aura" id="aura"></div>
+ <div class="scanline"></div>
+
+ <div class="intro">
+  <h1>ENERGY<br>SCANNER</h1>
+  <p>Descubre tu aura.<br>Mide tu vibra. Reta a tus amigos.</p>
+ </div>
+
+ <div class="status" id="status">ACTIVA LA CÁMARA PARA EMPEZAR</div>
+</section>
+
+<div class="controls">
+ <button class="alt" id="cam">ACTIVAR CÁMARA</button>
+ <button id="scan" disabled>SCAN ✦</button>
+</div>
+
+<section class="card" id="card">
+ <div class="scoretop">
+  <div>
+   <div class="num" id="num">----</div>
+   <div class="cname" id="cname"></div>
+  </div>
+  <div class="tier" id="tier"></div>
+ </div>
+
+ <div class="tag" id="archetype"></div>
+ <div class="meters" id="meters"></div>
+ <p class="reading" id="reading"></p>
+
+ <button class="battle" id="battle">⚔ AURA BATTLE</button>
+ <button class="alt" style="width:100%;margin-top:8px" id="share">
+  COMPARTIR RESULTADO ↗
+ </button>
+</section>
+
+<section class="board" id="board">
+ <div class="winner" id="winner"></div>
+ <div id="fighters"></div>
+ <button class="battle" id="again">NUEVA BATALLA</button>
+</section>
+
+<canvas id="sample" width="48" height="48" hidden></canvas>
+
+<p class="tiny">
+AURA es una experiencia de entretenimiento. No mide campos energéticos reales
+ni realiza evaluaciones médicas o psicológicas. El análisis visual se realiza
+en tu dispositivo y las imágenes no se envían a un servidor.
+</p>
+
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const video=$("video");
+const stage=$("stage");
+const status=$("status");
+const card=$("card");
+const canvas=$("sample");
+const ctx=canvas.getContext("2d",{willReadFrequently:true});
+
+let fighters=[];
+let last=null;
+
+const palettes=[
+ ["VIOLETA CÓSMICO","VISIONARIO","#8c52ff","#00d9ff",
+ "Intuición alta, imaginación rápida y una presencia difícil de ignorar."],
+
+ ["AZUL ELÉCTRICO","ESTRATEGA","#00b7ff","#536dff",
+ "Mente enfocada, energía estable y tendencia a tomar el control cuando importa."],
+
+ ["VERDE NEÓN","CATALIZADOR","#38ff9c","#b7ff4a",
+ "Equilibrio, curiosidad y una energía social que levanta al grupo."],
+
+ ["ORO SOLAR","PROTAGONISTA","#ffd447","#ff7a00",
+ "Impulso, confianza y ganas de convertir cualquier habitación en tu escenario."],
+
+ ["ROSA MAGNÉTICO","CONECTOR","#ff3fa4","#9b5cff",
+ "Carisma, sensibilidad y un radar especial para leer a los demás."],
+
+ ["ROJO PLASMA","COMPETIDOR","#ff334e","#ff8a00",
+ "Intensidad, decisión y cero interés por pasar desapercibido."]
+];
+
+function seeded(n){
+ const x=Math.sin(n)*10000;
+ return x-Math.floor(x);
+}
+
+$("cam").onclick=async()=>{
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({
+   video:{
+    facingMode:"user",
+    width:{ideal:1280},
+    height:{ideal:1920}
+   },
+   audio:false
+  });
+
+  video.srcObject=stream;
+  stage.classList.add("live");
+  status.textContent="CÁMARA LISTA · 100% LOCAL";
+  $("scan").disabled=false;
+  $("cam").textContent="CÁMARA ✓";
+
+ }catch(e){
+  status.textContent="PERMITE EL ACCESO A LA CÁMARA";
+ }
+};
+
+$("scan").onclick=async()=>{
+
+ card.classList.remove("show");
+ stage.classList.add("scanning");
+
+ const phases=[
+  "CALIBRANDO LUZ",
+  "LEYENDO FIRMA CROMÁTICA",
+  "ANALIZANDO INTENSIDAD",
+  "AURA DETECTADA"
+ ];
+
+ for(const phase of phases){
+  status.textContent=phase+"…";
+  await new Promise(r=>setTimeout(r,600));
+ }
+
+ ctx.drawImage(video,0,0,48,48);
+
+ const data=ctx.getImageData(0,0,48,48).data;
+
+ let r=0,g=0,b=0;
+ let luminosity=[];
+
+ for(let i=0;i<data.length;i+=4){
+  r+=data[i];
+  g+=data[i+1];
+  b+=data[i+2];
+  luminosity.push((data[i]+data[i+1]+data[i+2])/3);
+ }
+
+ const pixels=data.length/4;
+
+ r/=pixels;
+ g/=pixels;
+ b/=pixels;
+
+ const avg=(r+g+b)/3;
+
+ const variance=
+  luminosity.reduce((sum,x)=>sum+(x-avg)**2,0)/pixels;
+
+ const contrast=Math.sqrt(variance);
+
+ const seed=Math.round(
+  r*13+
+  g*17+
+  b*19+
+  contrast*23
+ );
+
+ const palette=
+  palettes[Math.abs(seed)%palettes.length];
+
+ const metrics={
+  Energía:Math.round(55+seeded(seed+1)*44),
+  Magnetismo:Math.round(50+seeded(seed+2)*49),
+  Intuición:Math.round(48+seeded(seed+3)*51),
+  Enfoque:Math.round(52+seeded(seed+4)*47),
+  Caos:Math.round(20+seeded(seed+5)*79)
+ };
+
+ let score=Math.round(
+  4200+
+  metrics.Energía*18+
+  metrics.Magnetismo*14+
+  metrics.Intuición*10+
+  contrast*18
+ );
+
+ score=Math.max(1111,Math.min(9999,score));
+
+ let tier="COMMON";
+
+ if(score>=6000) tier="RARE";
+ if(score>=7200) tier="EPIC";
+ if(score>=8200) tier="LEGENDARY";
+ if(score>=9000) tier="COSMIC";
+
+ last={
+  name:"JUGADOR "+(fighters.length+1),
+  score,
+  color:palette[0],
+  tier
+ };
+
+ $("aura").style.setProperty("--a",palette[2]);
+ $("aura").style.setProperty("--b",palette[3]);
+
+ $("num").textContent=score;
+ $("cname").textContent=palette[0];
+ $("tier").textContent=tier;
+ $("archetype").textContent="ARQUETIPO · "+palette[1];
+
+ $("meters").innerHTML=
+  Object.entries(metrics)
+  .map(([name,value])=>
+   `<div class="meter">
+     <b>${value}</b>
+     <span>${name.toUpperCase()}</span>
+    </div>`
+  ).join("");
+
+ $("reading").textContent=palette[4];
+
+ stage.classList.remove("scanning");
+ status.textContent=palette[0]+" · "+tier;
+
+ card.classList.add("show");
+};
+
+$("battle").onclick=()=>{
+
+ if(!last) return;
+
+ fighters.push(last);
+ card.classList.remove("show");
+
+ if(fighters.length===1){
+
+  status.textContent="⚔ JUGADOR 2 · PREPÁRATE";
+  $("scan").textContent="SCAN JUGADOR 2";
+
+ }else{
+
+  const winner=
+   fighters[0].score>=fighters[1].score
+   ?fighters[0]
+   :fighters[1];
+
+  $("winner").textContent=
+   "🏆 "+winner.name+" GANA";
+
+  $("fighters").innerHTML=
+   fighters.map(f=>
+    `<div class="fighter">
+      <span>
+       <b>${f.name}</b><br>
+       <small>${f.color} · ${f.tier}</small>
+      </span>
+      <b>${f.score}</b>
+     </div>`
+   ).join("");
+
+  $("board").classList.add("show");
+
+  $("scan").disabled=true;
+
+  status.textContent="AURA BATTLE COMPLETADA";
+ }
+};
+
+$("again").onclick=()=>{
+
+ fighters=[];
+ last=null;
+
+ $("board").classList.remove("show");
+ $("scan").disabled=false;
+ $("scan").textContent="SCAN ✦";
+
+ status.textContent=
+  "NUEVA BATALLA · JUGADOR 1";
+};
+
+$("share").onclick=async()=>{
+
+ if(!last) return;
+
+ const text=
+  `Mi AURA SCORE es ${last.score} · ${last.color} · ${last.tier} 🔮
+¿Puedes superar mi aura?`;
+
+ try{
+
+  if(navigator.share){
+
+   await navigator.share({
+    title:"AURA · Energy Scanner",
+    text,
+    url:location.href
+   });
+
+  }else{
+
+   await navigator.clipboard.writeText(
+    text+" "+location.href
+   );
+
+   alert("Resultado copiado ✦");
+  }
+
+ }catch(e){}
+};
+</script>
 </body>
 </html>
